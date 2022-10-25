@@ -1,0 +1,1586 @@
+
+<!doctype html>
+
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+  <meta name="theme-color" content="#4F7DC9">
+  <meta charset="UTF-8">
+  <title>Makeup with Augmented Faces in Kotlin</title>
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Code+Pro:400|Roboto:400,300,400italic,500,700|Roboto+Mono">
+  <link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://storage.googleapis.com/codelab-elements/codelab-elements.css">
+  <style>
+    .success {
+      color: #1e8e3e;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <google-codelab-analytics gaid="UA-49880327-14"></google-codelab-analytics>
+  <google-codelab codelab-gaid="UA-70080194-6"
+                  id="makeup-lab"
+                  title="Makeup with Augmented Faces in Kotlin"
+                  environment="web"
+                  feedback-link="https://github.com/Kristina-Simakova/ar_makeup_codelab/issues">
+    
+      <google-codelab-step label="Introduction" duration="0">
+        <p><strong>Last Updated:</strong> 2021-01-23</p>
+<h2 is-upgraded><strong>What you&#39;ll build</strong></h2>
+<p>In this codelab, we will learn how to use Augmented Faces API. We will use ARCore Android SDK and Kotlin without using Sceneform SDK.</p>
+<p>Your app will:</p>
+<ul>
+<li>Apply texture to a face mesh</li>
+<li>Combine several mesh textures together with shaders</li>
+<li>Apply different tint colors to textures to change lip or contour color with shaders</li>
+<li>Change eyeshadow and contour color at runtime independently</li>
+</ul>
+<p>This codelab is focused on Augmented Faces API. Non-relevant concepts and code blocks are glossed over and are provided for you to simply copy and paste.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Prerequisites" duration="1">
+        <h2 is-upgraded><strong>Hardware Requirements</strong></h2>
+<ul>
+<li>A <a href="https://developers.google.com/ar/discover/#supported_devices" target="_blank">supported ARCore device</a>, connected via a USB cable to your development machine. This device also must support the Depth API. Please see <a href="https://developers.google.com/ar/discover/supported-devices" target="_blank">this list of supported devices</a>.</li>
+<li>Enable USB debugging for this device.</li>
+</ul>
+<h2 is-upgraded><strong>Software Requirements</strong></h2>
+<ul>
+<li><a href="https://github.com/google-ar/arcore-android-sdk/releases" target="_blank">ARCore SDK 1.21.0</a> or later.</li>
+<li>A development machine with <a href="https://developer.android.com/studio/index.html" target="_blank">Android Studio</a> (v4.1 or later).</li>
+</ul>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Getting set up" duration="5">
+        <h2 is-upgraded><strong>Download the Starter Project</strong></h2>
+<p>You can either clone the repository: </p>
+<pre><code>git clone https://github.com/Kristina-Simakova/ar_makeup_codelab.git</code></pre>
+<p>Or download a ZIP file and extract it:</p>
+<p><a href="https://github.com/Kristina-Simakova/ar_makeup_codelab/archive/main.zip" target="_blank"><paper-button class="colored" raised><iron-icon icon="file-download"></iron-icon>Download ZIP</paper-button></a></p>
+<p>Launch Android Studio. Click <strong>Open an existing Android Studio project</strong>. </p>
+<h2 is-upgraded><strong>Running the project</strong></h2>
+<p>When you run the app for the first time, it will request CAMERA permission. Tap <strong>Allow</strong> to continue.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Project Setup" duration="3">
+        <h2 is-upgraded><strong>What&#39;s our starting point?</strong></h2>
+<p>Our starting point is a modified version of ARCore SDK sample for Augmented Faces. The code has been modified in a way that we can now easily add different textures and objects to a face object without using Sceneform SDK. </p>
+<h2 is-upgraded><strong>Project structure</strong></h2>
+<ul>
+<li><code>Helpers</code> - original Java files from sample code </li>
+<li><code>Rendering</code> - original Java files from sample code that handles rendering of AR objects and background</li>
+</ul>
+<p>Additional files for this Codelab: </p>
+<ul>
+<li><code>AugmentedFaceFragment.kt</code> - handles rendering and tracking of Augmented Faces </li>
+<li><code>AugmentedFaceListener.kt</code> - handles Add and Update Augmented Faces callbacks</li>
+<li><code>AugmentedFaceNode.kt</code> - handles the rendering of a face including a texture and associated 3D models</li>
+<li><code>AugmentedFaceRenderer.kt</code> - renders face texture</li>
+<li><code>FaceRegion.kt</code> - renders 3D model located on a defined FaceLandmark</li>
+</ul>
+<p class="image-container"><img style="width: 624.00px" src="img/157f08ef5d7708d4.png"></p>
+<h2 is-upgraded><strong>MainActivity setup</strong></h2>
+<p><code>activity_main.xml</code></p>
+<pre><code>&lt;?xml version=&#34;1.0&#34; encoding=&#34;utf-8&#34;?&gt;
+&lt;androidx.constraintlayout.widget.ConstraintLayout xmlns:android=&#34;http://schemas.android.com/apk/res/android&#34;
+   xmlns:tools=&#34;http://schemas.android.com/tools&#34;
+   android:layout_width=&#34;match_parent&#34;
+   android:layout_height=&#34;match_parent&#34;
+   tools:context=&#34;.MainActivity&#34;&gt;
+
+   &lt;fragment android:name=&#34;blog.creativetech.arfaces.arface.AugmentedFaceFragment&#34;
+       android:id=&#34;@+id/face_view&#34;
+       android:layout_width=&#34;match_parent&#34;
+       android:layout_height=&#34;match_parent&#34;
+       android:layout_gravity=&#34;top&#34; /&gt;
+
+&lt;/androidx.constraintlayout.widget.ConstraintLayout&gt;
+</code></pre>
+<p><code>MainActivity.kt</code></p>
+<pre><code>class MainActivity : AppCompatActivity(), AugmentedFaceListener {
+   override fun onCreate(savedInstanceState: Bundle?) {
+       super.onCreate(savedInstanceState)
+       setContentView(R.layout.activity_main)
+       (face_view as AugmentedFaceFragment).setAugmentedFaceListener(this)
+   }
+
+   override fun onFaceAdded(face: AugmentedFaceNode) {}
+
+   override fun onFaceUpdate(face: AugmentedFaceNode) {}
+}</code></pre>
+<p>In <code>activity_main.xm</code>l we add <code>AugmentedFaceFragment</code> as a main view and to be able to receive events from this fragment, we need to define and set <code>AugmentedFaceListener</code> to our fragment. </p>
+<p><code>onFaceAdded</code> method will be called when ARCore detects a new face and <code>onFaceUpdate</code> will be called on each frame update. </p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Prepare makeup masks" duration="10">
+        <p>Let&#39;s see how we can define custom face landmarks, like eyes, mouth and lips. </p>
+<p>You have all necessary files for this tutorial under <code>assets/models</code> . This chapter will have a short description on how to create different templates and you may skip it or come back to it later when you will make your own makeup filter.</p>
+<h2 is-upgraded><strong>Download face asset</strong></h2>
+<p>Download <code>canonical_face_texture.psd</code> file from the official ARCore github repository:</p>
+<p><a href="https://github.com/google-ar/arcore-android-sdk/blob/master/assets/canonical_face_texture.psd" target="_blank"><paper-button class="colored" raised><iron-icon icon="file-download"></iron-icon>Download ZIP</paper-button></a></p>
+<p class="image-container"><img style="width: 598.00px" src="img/c06b0c474a43dbef.png"></p>
+<p>We will use this template to prepare eyeshadow and blush textures.</p>
+<p>It is ideal to work with a designer at this step.</p>
+<h2 is-upgraded><strong>Working in Photoshop</strong></h2>
+<p>Open <code>canonical_face_texture.psd</code> in Photoshop and create a new layer.</p>
+<p class="image-container"><img style="width: 624.00px" src="img/927e83a18344368e.png"></p>
+<p>Draw with transparent white brush to be able to combine it with different tint colors and export the layer as .png. Do not include background and face mesh layers or other layers from the original file.</p>
+<p>By highlighting the blush area, we can now use this texture and combine this template with different colors of the blush. </p>
+<p>Check out <code>assets/models</code> folder to see the prepared textures.</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Apply color filter with shaders" duration="10">
+        <p>In this chapter, you will learn how to manipulate a fragment shader to apply tint to our mask.</p>
+<h2 is-upgraded><strong>Introduction to Shaders</strong></h2>
+<p>In computer graphics, a shader is a type of computer program originally used for shading in 3D scenes [Wikipedia]. For this tutorial, we use fragment and vertex shader. All shaders that are included in this project can be found under <code>app -&gt; src -&gt; assets -&gt; shaders</code></p>
+<h3 is-upgraded><strong>Fragment Shader</strong></h3>
+<p>Pixel shaders, also known as fragment shaders, compute color and other attributes of each &#34;fragment&#34;: a unit of rendering work affecting at most a single output pixel [Wikipedia]. </p>
+<h3 is-upgraded>Vertex Shader</h3>
+<p>Vertex shaders are the most established and common kind of 3D shader and are run once for each vertex given to the graphics processor. The purpose is to transform each vertex&#39;s 3D position in virtual space to the 2D coordinate at which it appears on the screen (as well as a depth value for the Z-buffer). Vertex shaders can manipulate properties such as position, color and texture coordinates, but cannot create new vertices [Wikipedia]. </p>
+<h2 is-upgraded><strong>Apply Color to Texture</strong></h2>
+<p>You can find texture templates for <code>contour</code> and <code>eyeshadow</code> in the assets folder in the project. We will start working with the contour texture and add eyeshadow texture later in this tutorial.</p>
+<h3 is-upgraded><strong>Add Texture to Face</strong></h3>
+<p>In <code>MainActivity.kt</code> modify <code>onFaceAdded</code> method as follows:</p>
+<pre><code>override fun onFaceAdded(face: AugmentedFaceNode) {
+   face.setFaceMeshTexture(&#34;models/contour.png&#34;)
+}</code></pre>
+<p>Run the app and make sure you can see a contour/blush texture.</p>
+<h3 is-upgraded><strong>Add Tint Color to Face Texture</strong></h3>
+<p>In the next step we will apply a hard-coded color value to our texture before we will implement UI elements.</p>
+<p>Open <code>AugmentedFaceRenderer</code> class and you can see that <code>tintColorUniform</code> variable is defined and binded with the shader program:</p>
+<p><code>AugmentedFaceRenderer.kt</code></p>
+<pre><code>...
+private var tintColorUniform = 0
+...
+fun createOnGlThread(
+   context: Context,
+   diffuseTextureAssetName: String
+) {
+   ...
+   tintColorUniform = GLES20.glGetUniformLocation(program, &#34;u_TintColor&#34;)
+   ...
+}
+... 
+
+fun draw(
+   projmtx: FloatArray?,
+   viewmtx: FloatArray?,
+   modelmtx: FloatArray?,
+   colorCorrectionRgba: FloatArray?,
+   face: AugmentedFace
+) {
+   ... 
+   GLES20.glUniform4f(tintColorUniform, 0f, 0f, 0f, 0f)
+   ... 
+}</code></pre>
+<p>Although, if you open <code>object.frag</code> shader file, you can see that <code>u_TintColor</code> is not defined there. Let&#39;s fix this and add <code>u_TintColor</code> variable:</p>
+<p><code>object.frag</code></p>
+<pre><code>...
+uniform vec4 u_TintColor;
+
+void main() {
+  ...  
+}</code></pre>
+<p>Now we will define a hardcoded value of tintColor in <code>AugmentedFaceRenderer</code> for starters:</p>
+<p><code>AugmentedFaceRenderer.kt</code></p>
+<pre><code>private var tintColorUniform = 0
+private var tintColor = floatArrayOf(0.647f, 0.357f, 0.33f, 1f)</code></pre>
+<p>And modify the draw method at approx line 143 as following:</p>
+<p><code>AugmentedFaceRenderer.kt</code></p>
+<pre><code>...
+GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId[0])
+GLES20.glUniform4fv(tintColorUniform, 1, tintColor, 0)
+GLES20.glEnable(GLES20.GL_BLEND)
+...</code></pre>
+<p class="image-container"><img style="width: 485.00px" src="img/9be1670d0aa48de1.png"></p>
+<aside class="special"><p><strong>Pay attention that we use different methods here!</strong></p>
+</aside>
+<p>Now we can apply the tint color in the fragment shader. Multiply <code>objectColor</code> by <code>u_TintColor</code> value at approx line 52: </p>
+<p><code>object.frag</code></p>
+<pre><code>void main() {
+  ...  
+  vec4 objectColor = texture2D(u_Texture, vec2(v_TexCoord.x, 1.0 - v_TexCoord.y));
+  objectColor.rgb = objectColor.rgb * u_TintColor.rgb;
+  ...
+}</code></pre>
+<p>Now try to run the app and see if you get contour texture with applied tint:</p>
+<p class="image-container"><img style="width: 557.50px" src="img/5d2c7f3654527232.png"></p>
+<p>Here are the modified files for <code>AugmentedFaceRenderer.kt</code> and <code>object.frag</code> from this chapter just in case you might have an error in your code:</p>
+<p><code>object.frag</code></p>
+<pre><code>precision mediump float;
+
+uniform sampler2D u_Texture;
+
+uniform vec4 u_LightingParameters;
+uniform vec4 u_MaterialParameters;
+uniform vec4 u_ColorCorrectionParameters;
+
+varying vec3 v_ViewPosition;
+varying vec3 v_ViewNormal;
+varying vec2 v_TexCoord;
+uniform vec4 u_ObjColor;
+uniform vec4 u_TintColor;
+
+void main() {
+   // We support approximate sRGB gamma.
+   const float kGamma = 0.4545454;
+   const float kInverseGamma = 2.2;
+   const float kMiddleGrayGamma = 0.466;
+
+   // Unpack lighting and material parameters for better naming.
+   vec3 viewLightDirection = u_LightingParameters.xyz;
+   vec3 colorShift = u_ColorCorrectionParameters.rgb;
+   float averagePixelIntensity = u_ColorCorrectionParameters.a;
+
+   float materialAmbient = u_MaterialParameters.x;
+   float materialDiffuse = u_MaterialParameters.y;
+   float materialSpecular = u_MaterialParameters.z;
+   float materialSpecularPower = u_MaterialParameters.w;
+
+   // Normalize varying parameters, because they are linearly interpolated in the vertex shader.
+   vec3 viewFragmentDirection = normalize(v_ViewPosition);
+   vec3 viewNormal = normalize(v_ViewNormal);
+
+   // Flip the y-texture coordinate to address the texture from top-left.
+   vec4 objectColor = texture2D(u_Texture, vec2(v_TexCoord.x, 1.0 - v_TexCoord.y));
+   objectColor.rgb = objectColor.rgb * u_TintColor.rgb;
+
+   // Apply color to grayscale image only if the alpha of u_ObjColor is
+   // greater and equal to 255.0.
+   objectColor.rgb *= mix(vec3(1.0), u_ObjColor.rgb / 255.0,
+                          step(255.0, u_ObjColor.a));
+
+   // Apply inverse SRGB gamma to the texture before making lighting calculations.
+   objectColor.rgb = pow(objectColor.rgb, vec3(kInverseGamma));
+
+   // Ambient light is unaffected by the light intensity.
+   float ambient = materialAmbient;
+
+   // Approximate a hemisphere light (not a harsh directional light).
+   float diffuse = materialDiffuse *
+           0.5 * (dot(viewNormal, viewLightDirection) + 1.0);
+
+   // Compute specular light.
+   vec3 reflectedLightDirection = reflect(viewLightDirection, viewNormal);
+   float specularStrength = max(0.0, dot(viewFragmentDirection, reflectedLightDirection));
+   float specular = materialSpecular *
+           pow(specularStrength, materialSpecularPower);
+
+   vec3 color = objectColor.rgb * (ambient + diffuse) + specular;
+   // Apply SRGB gamma before writing the fragment color.
+   color.rgb = pow(color, vec3(kGamma));
+   // Apply average pixel intensity and color shift
+   color *= colorShift * (averagePixelIntensity / kMiddleGrayGamma);
+   gl_FragColor.rgb = color;
+   gl_FragColor.a = objectColor.a;
+}</code></pre>
+<p><code>AugmentedFaceRenderer.kt</code></p>
+<pre><code>package blog.creativetech.armakeup.arface
+
+import android.content.Context
+import android.graphics.BitmapFactory
+import android.opengl.GLES20
+import android.opengl.GLUtils
+import android.opengl.Matrix
+import blog.creativetech.armakeup.arface.rendering.ShaderUtil.loadGLShader
+import com.google.ar.core.AugmentedFace
+import java.io.IOException
+import java.nio.FloatBuffer
+import java.nio.ShortBuffer
+
+public class AugmentedFaceRenderer {
+   private val TAG = AugmentedFaceRenderer::class.java.simpleName
+
+   private var modelViewUniform = 0
+   private var modelViewProjectionUniform = 0
+
+   private var textureUniform = 0
+
+   private var lightingParametersUniform = 0
+
+   private var materialParametersUniform = 0
+
+   private var colorCorrectionParameterUniform = 0
+
+   private var tintColorUniform = 0
+   private var tintColor = floatArrayOf(0.647f, 0.357f, 0.33f, 1f)
+
+   private var attriVertices = 0
+   private var attriUvs = 0
+   private var attriNormals = 0
+
+   // Set some default material properties to use for lighting.
+   private var ambient = 0.3f
+   private var diffuse = 1.0f
+   private var specular = 1.0f
+   private var specularPower = 6.0f
+
+   private val textureId = IntArray(1)
+
+   private val lightDirection = floatArrayOf(0.0f, 1.0f, 0.0f, 0.0f)
+   private var program = 0
+   private val modelViewProjectionMat = FloatArray(16)
+   private val modelViewMat = FloatArray(16)
+   private val viewLightDirection = FloatArray(4)
+
+   fun AugmentedFaceRenderer() {}
+
+   @Throws(IOException::class)
+   fun createOnGlThread(
+       context: Context,
+       diffuseTextureAssetName: String
+   ) {
+       val vertexShader: Int =
+           loadGLShader(TAG, context, GLES20.GL_VERTEX_SHADER, Companion.VERTEX_SHADER_NAME)
+       val fragmentShader: Int =
+           loadGLShader(TAG, context, GLES20.GL_FRAGMENT_SHADER, Companion.FRAGMENT_SHADER_NAME)
+       program = GLES20.glCreateProgram()
+       GLES20.glAttachShader(program, vertexShader)
+       GLES20.glAttachShader(program, fragmentShader)
+       GLES20.glLinkProgram(program)
+       modelViewProjectionUniform = GLES20.glGetUniformLocation(program, &#34;u_ModelViewProjection&#34;)
+       modelViewUniform = GLES20.glGetUniformLocation(program, &#34;u_ModelView&#34;)
+       textureUniform = GLES20.glGetUniformLocation(program, &#34;u_Texture&#34;)
+       lightingParametersUniform = GLES20.glGetUniformLocation(program, &#34;u_LightningParameters&#34;)
+       materialParametersUniform = GLES20.glGetUniformLocation(program, &#34;u_MaterialParameters&#34;)
+       colorCorrectionParameterUniform =
+           GLES20.glGetUniformLocation(program, &#34;u_ColorCorrectionParameters&#34;)
+       tintColorUniform = GLES20.glGetUniformLocation(program, &#34;u_TintColor&#34;)
+       attriVertices = GLES20.glGetAttribLocation(program, &#34;a_Position&#34;)
+       attriUvs = GLES20.glGetAttribLocation(program, &#34;a_TexCoord&#34;)
+       attriNormals = GLES20.glGetAttribLocation(program, &#34;a_Normal&#34;)
+       GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+       GLES20.glGenTextures(1, textureId, 0)
+       loadTexture(context, textureId, diffuseTextureAssetName)
+   }
+
+   @Throws(IOException::class)
+   private fun loadTexture(
+       context: Context,
+       textureId: IntArray,
+       filename: String
+   ) {
+       val textureBitmap = BitmapFactory.decodeStream(context.getAssets().open(filename))
+       GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId[0])
+       GLES20.glTexParameteri(
+           GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR_MIPMAP_LINEAR
+       )
+       GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
+       GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, textureBitmap, 0)
+       GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D)
+       GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
+       textureBitmap.recycle()
+   }
+
+   fun draw(
+       projmtx: FloatArray?,
+       viewmtx: FloatArray?,
+       modelmtx: FloatArray?,
+       colorCorrectionRgba: FloatArray?,
+       face: AugmentedFace
+   ) {
+       val vertices: FloatBuffer = face.meshVertices
+       val normals: FloatBuffer = face.meshNormals
+       val textureCoords: FloatBuffer = face.meshTextureCoordinates
+       val triangleIndices: ShortBuffer = face.meshTriangleIndices
+       GLES20.glUseProgram(program)
+       GLES20.glDepthMask(false)
+       val modelViewProjectionMatTemp = FloatArray(16)
+       Matrix.multiplyMM(modelViewProjectionMatTemp, 0, projmtx, 0, viewmtx, 0)
+       Matrix.multiplyMM(modelViewProjectionMat, 0, modelViewProjectionMatTemp, 0, modelmtx, 0)
+       Matrix.multiplyMM(modelViewMat, 0, viewmtx, 0, modelmtx, 0)
+
+       // Set the lighting environment properties.
+       Matrix.multiplyMV(viewLightDirection, 0, modelViewMat, 0, lightDirection, 0)
+       normalizeVec3(viewLightDirection)
+       GLES20.glUniform4f(
+           lightingParametersUniform,
+           viewLightDirection[0],
+           viewLightDirection[1],
+           viewLightDirection[2],
+           1f
+       )
+       GLES20.glUniform4fv(colorCorrectionParameterUniform, 1, colorCorrectionRgba, 0)
+
+       // Set the object material properties.
+       GLES20.glUniform4f(materialParametersUniform, ambient, diffuse, specular, specularPower)
+
+       // Set the ModelViewProjection matrix in the shader.
+       GLES20.glUniformMatrix4fv(modelViewUniform, 1, false, modelViewMat, 0)
+       GLES20.glUniformMatrix4fv(modelViewProjectionUniform, 1, false, modelViewProjectionMat, 0)
+       GLES20.glEnableVertexAttribArray(attriVertices)
+       GLES20.glVertexAttribPointer(attriVertices, 3, GLES20.GL_FLOAT, false, 0, vertices)
+       GLES20.glEnableVertexAttribArray(attriNormals)
+       GLES20.glVertexAttribPointer(attriNormals, 3, GLES20.GL_FLOAT, false, 0, normals)
+       GLES20.glEnableVertexAttribArray(attriUvs)
+       GLES20.glVertexAttribPointer(attriUvs, 2, GLES20.GL_FLOAT, false, 0, textureCoords)
+       GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+       GLES20.glUniform1i(textureUniform, 0)
+       GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId[0])
+       GLES20.glUniform4fv(tintColorUniform, 1, tintColor, 0)
+       GLES20.glEnable(GLES20.GL_BLEND)
+
+       // Textures are loaded with premultiplied alpha
+       // (https://developer.android.com/reference/android/graphics/BitmapFactory.Options#inPremultiplied),
+       // so we use the premultiplied alpha blend factors.
+       GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_SRC_ALPHA)
+       GLES20.glDrawElements(
+           GLES20.GL_TRIANGLES, triangleIndices.limit(), GLES20.GL_UNSIGNED_SHORT, triangleIndices
+       )
+       GLES20.glUseProgram(0)
+       GLES20.glDepthMask(true)
+   }
+
+   fun setMaterialProperties(
+       ambient: Float,
+       diffuse: Float,
+       specular: Float,
+       specularPower: Float
+   ) {
+       this.ambient = ambient
+       this.diffuse = diffuse
+       this.specular = specular
+       this.specularPower = specularPower
+   }
+
+   private fun normalizeVec3(v: FloatArray) {
+       val reciprocalLength = 1.0f / Math.sqrt(
+           v[0] * v[0] + v[1] * v[1] + (v[2] * v[2]).toDouble()
+       ).toFloat()
+       v[0] *= reciprocalLength
+       v[1] *= reciprocalLength
+       v[2] *= reciprocalLength
+   }
+
+   companion object {
+       private const val VERTEX_SHADER_NAME = &#34;shaders/object.vert&#34;
+       private const val FRAGMENT_SHADER_NAME = &#34;shaders/object.frag&#34;
+   }
+}
+</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Change contour color" duration="15">
+        <p>Next step is to add UI elements to change contour color at runtime.</p>
+<h2 is-upgraded><strong>Set up UI</strong></h2>
+<p>Let&#39;s start with a layout file. Modify activity_main.xml to include ChipGroup for color selection:</p>
+<p><code>activity_main.xml</code></p>
+<pre><code>&lt;?xml version=&#34;1.0&#34; encoding=&#34;utf-8&#34;?&gt;
+&lt;androidx.constraintlayout.widget.ConstraintLayout xmlns:android=&#34;http://schemas.android.com/apk/res/android&#34;
+   xmlns:tools=&#34;http://schemas.android.com/tools&#34;
+   android:layout_width=&#34;match_parent&#34;
+   android:layout_height=&#34;match_parent&#34;
+   xmlns:app=&#34;http://schemas.android.com/apk/res-auto&#34;
+   tools:context=&#34;.MainActivity&#34;&gt;
+
+   &lt;fragment android:name=&#34;blog.creativetech.armakeup.arface.AugmentedFaceFragment&#34;
+       android:id=&#34;@+id/face_view&#34;
+       android:layout_width=&#34;match_parent&#34;
+       android:layout_height=&#34;match_parent&#34;
+       android:layout_gravity=&#34;top&#34; /&gt;
+
+   &lt;com.google.android.material.textview.MaterialTextView
+       android:id=&#34;@+id/contour_text&#34;
+       android:layout_width=&#34;wrap_content&#34;
+       android:layout_height=&#34;wrap_content&#34;
+       app:layout_constraintLeft_toLeftOf=&#34;parent&#34;
+       app:layout_constraintBottom_toBottomOf=&#34;@id/contour_group&#34;
+       app:layout_constraintTop_toTopOf=&#34;@id/contour_group&#34;
+       android:layout_marginStart=&#34;16dp&#34;
+       android:text=&#34;@string/choose_contour&#34; /&gt;
+
+   &lt;com.google.android.material.chip.ChipGroup
+       android:id=&#34;@+id/contour_group&#34;
+       app:singleSelection=&#34;true&#34;
+       android:layout_marginStart=&#34;16dp&#34;
+       android:layout_marginBottom=&#34;16dp&#34;
+       android:layout_width=&#34;wrap_content&#34;
+       android:layout_height=&#34;wrap_content&#34;
+       app:checkedChip=&#34;@id/chip_contour1&#34;
+       app:layout_constraintLeft_toRightOf=&#34;@id/contour_text&#34;
+       app:layout_constraintBottom_toBottomOf=&#34;parent&#34;&gt;
+
+       &lt;com.google.android.material.chip.Chip
+           style=&#34;@style/Widget.MaterialComponents.Chip.Choice&#34;
+           android:id=&#34;@+id/chip_contour1&#34;
+           android:layout_width=&#34;wrap_content&#34;
+           android:layout_height=&#34;wrap_content&#34;
+           android:backgroundTint=&#34;#af8062&#34;
+           android:text=&#34;@string/java&#34;/&gt;
+       &lt;com.google.android.material.chip.Chip
+           style=&#34;@style/Widget.MaterialComponents.Chip.Choice&#34;
+           android:id=&#34;@+id/chip_contour2&#34;
+           android:layout_width=&#34;wrap_content&#34;
+           android:layout_height=&#34;wrap_content&#34;
+           android:backgroundTint=&#34;#f3d9a9&#34;
+           android:text=&#34;@string/banana&#34;/&gt;
+
+   &lt;/com.google.android.material.chip.ChipGroup&gt;
+&lt;/androidx.constraintlayout.widget.ConstraintLayout&gt;</code></pre>
+<p>In MainActivity, let&#39;s define following variables:</p>
+<ul>
+<li><code>contourChanged</code> : a boolean to identify if a user changed a contour color</li>
+<li><code>contourColor</code> : selected contour color</li>
+</ul>
+<p><code>MainActivity.kt</code></p>
+<pre><code>private var contourChanged = false
+private var contourColor = floatArrayOf(0.686f, 0.5f, 0.38f, 1f)</code></pre>
+<p>Next, we will make following changes:</p>
+<ol type="1" start="1">
+<li>Set <code>CheckedChangeListener</code> for <code>ChipGroup</code> in <code>onCreate</code> method</li>
+<li>Add <code>changeContour</code> method to remember the choice</li>
+<li><code>onFaceUpdate</code> method is called on every frame draw and we will update the contourColor and set it using <code>setContourColor,</code> which we will add in the next step</li>
+</ol>
+<p><code>MainActivity.kt</code></p>
+<pre><code>class MainActivity : AppCompatActivity(), AugmentedFaceListener {
+   private var contourChanged = false
+   private var contourColor = floatArrayOf(0.686f, 0.5f, 0.38f, 1f)
+
+   override fun onCreate(savedInstanceState: Bundle?) {
+       super.onCreate(savedInstanceState)
+       setContentView(R.layout.activity_main)
+       (face_view as AugmentedFaceFragment).setAugmentedFaceListener(this)
+       contour_group.setOnCheckedChangeListener { _, checkedId -&gt;
+           when (checkedId) {
+               chip_contour1.id -&gt; 
+                 changeContour(floatArrayOf(0.686f, 0.5f, 0.38f, 1f))
+               chip_contour2.id -&gt; 
+                 changeContour(floatArrayOf(0.95f, 0.85f, 0.66f, 1f))
+           }
+       }
+   }
+
+   override fun onFaceAdded(face: AugmentedFaceNode) {
+       face.setFaceMeshTexture(&#34;models/contour.png&#34;)
+       face.setContourColor(contourColor)
+   }
+
+   override fun onFaceUpdate(face: AugmentedFaceNode) {
+       if (contourChanged) {
+           contourChanged = false
+           face.setContourColor(contourColor)
+       }
+   }
+
+   private fun changeContour(color: FloatArray) {
+       contourColor = color
+       contourChanged = true
+   }
+}</code></pre>
+<h2 is-upgraded><strong>Update contour color</strong></h2>
+<p>Add <code>setContourColor</code> method in <code>AugmentedFaceNode</code> class:</p>
+<p><code>AugmentedFaceNode.kt</code></p>
+<pre><code>fun setContourColor(contourColor: FloatArray) {
+   augmentedFaceRenderer.setContourColor(contourColor)
+}  </code></pre>
+<p>And add following code to AugmentedFaceRenderer class to apply the selected color as the tint color:</p>
+<p><code>AugmentedFaceRenderer.kt</code></p>
+<pre><code>fun setContourColor(contourColor: FloatArray) {
+   tintColor = contourColor
+}</code></pre>
+<p>Now we can run the app and see the result:</p>
+<p class="image-container"><img style="width: 624.00px" src="img/9825d4644275c1ba.png"></p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Working with Multiple Textures" duration="10">
+        <p>In this chapter, you will learn how to apply multiple textures to a face mesh. As a next step, we will add an eyeshadow texture and combine it together with the contour texture.</p>
+<p>To start with the simplest case possible we will add a second texture, but still apply the same tint color as a contour color and will add a seperate tint color in the next chapter.</p>
+<h2 is-upgraded><strong>Bind Second Texture with Shader</strong></h2>
+<p>This is the most complicated part of this tutorial. We need to understand how texture binding works and how to pass the data we need to a fragment shader. Let&#39;s start with defining a new variable <code>u_TextureEye</code> in our fragment shader:</p>
+<p><code>object.frag</code></p>
+<pre><code>precision mediump float;
+
+uniform sampler2D u_Texture;
+uniform sampler2D u_TextureEye;</code></pre>
+<p>Define <code>textureUniformEye</code> and increase <code>textureId</code> array size to 2:</p>
+<p><code>AugmentedFaceRenderer.kt</code></p>
+<pre><code>public class AugmentedFaceRenderer {
+   ...
+   private var textureUniform = 0
+   private var textureUniformEye = 0
+   ...  
+   private val textureId = IntArray(2)
+   ...
+}</code></pre>
+<p>Next, there are a few changes we need to make to <code>createOnGlThread:</code></p>
+<ol type="1" start="1">
+<li>change the method signature and the last param to <code>diffuseTextureAssetNames: ArrayList&lt;String&gt;</code></li>
+<li>bind <code>u_TextureEye</code> with <code>textureUniformEye</code> in <code>createOnGlThread</code> method approx. at line 68</li>
+<li>At approx line 80, we will rewrite loadTexture procedure and add <code>GL_TEXTURE1</code></li>
+</ol>
+<p><code>AugmentedFaceRenderer.kt</code></p>
+<pre><code>@Throws(IOException::class)
+fun createOnGlThread(
+       context: Context,
+       diffuseTextureAssetNames: ArrayList&lt;String&gt;
+) {
+   val vertexShader: Int =
+           loadGLShader(TAG, context, GLES20.GL_VERTEX_SHADER,
+                   Companion.VERTEX_SHADER_NAME)
+   val fragmentShader: Int =
+           loadGLShader(TAG, context, GLES20.GL_FRAGMENT_SHADER,
+                   Companion.FRAGMENT_SHADER_NAME)
+   program = GLES20.glCreateProgram()
+   GLES20.glAttachShader(program, vertexShader)
+   GLES20.glAttachShader(program, fragmentShader)
+   GLES20.glLinkProgram(program)
+   modelViewProjectionUniform = GLES20.glGetUniformLocation(program,
+           &#34;u_ModelViewProjection&#34;)
+   modelViewUniform = GLES20.glGetUniformLocation(program, &#34;u_ModelView&#34;)
+   textureUniform = GLES20.glGetUniformLocation(program, &#34;u_Texture&#34;)
+   //Bind Eye texture with shader variable
+   textureUniformEye = GLES20.glGetUniformLocation(program, &#34;u_TextureEye&#34;)
+   lightingParametersUniform = GLES20.glGetUniformLocation(program,
+           &#34;u_LightningParameters&#34;)
+   materialParametersUniform = GLES20.glGetUniformLocation(program,
+           &#34;u_MaterialParameters&#34;)
+   colorCorrectionParameterUniform =
+           GLES20.glGetUniformLocation(program, &#34;u_ColorCorrectionParameters&#34;)
+   tintColorUniform = GLES20.glGetUniformLocation(program, &#34;u_TintColor&#34;)
+   attriVertices = GLES20.glGetAttribLocation(program, &#34;a_Position&#34;)
+   attriUvs = GLES20.glGetAttribLocation(program, &#34;a_TexCoord&#34;)
+   attriNormals = GLES20.glGetAttribLocation(program, &#34;a_Normal&#34;)
+
+   // Size of the texture array
+   GLES20.glGenTextures(2, textureId, 0)
+   // Load texture0
+   GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+   loadTexture(context, textureId, diffuseTextureAssetNames[0], 0)
+
+   // Load texture1
+   GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
+   loadTexture(context, textureId, diffuseTextureAssetNames[1], 1)
+}</code></pre>
+<p>We need to rewrite <code>loadTexture</code> method and it&#39;s signature to be able to handle multiple textures by using index of the texture:</p>
+<p><code>AugmentedFaceRenderer.kt</code></p>
+<pre><code>@Throws(IOException::class)
+private fun loadTexture(
+   context: Context,
+   textureId: IntArray,
+   filename: String,
+   index: Int
+) {
+   val textureBitmap =
+       BitmapFactory.decodeStream(context.getAssets().open(filename))
+   GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId[index])
+   GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, 
+                          GLES20.GL_TEXTURE_MIN_FILTER, 
+                          GLES20.GL_LINEAR_MIPMAP_LINEAR)
+   GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, 
+                          GLES20.GL_TEXTURE_MAG_FILTER, 
+                          GLES20.GL_LINEAR)
+   GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, textureBitmap, 0)
+   GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D)
+   GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId[index])
+   textureBitmap.recycle()
+}</code></pre>
+<p>Next step is to modify the <code>draw</code> method and pass the texture reference to the shader:</p>
+<p><code>AugmentedFaceRenderer.kt</code></p>
+<pre><code>GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+GLES20.glUniform1i(textureUniform, 0)
+GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId[0])
+GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
+GLES20.glUniform1i(textureUniformEye, 1)
+GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId[1])</code></pre>
+<p>Here is a full modified version of the <code>draw</code> method:</p>
+<p><code>AugmentedFaceRenderer.kt</code></p>
+<pre><code>fun draw(
+   projmtx: FloatArray?,
+   viewmtx: FloatArray?,
+   modelmtx: FloatArray?,
+   colorCorrectionRgba: FloatArray?,
+   face: AugmentedFace
+) {
+   val vertices: FloatBuffer = face.meshVertices
+   val normals: FloatBuffer = face.meshNormals
+   val textureCoords: FloatBuffer = face.meshTextureCoordinates
+   val triangleIndices: ShortBuffer = face.meshTriangleIndices
+   GLES20.glUseProgram(program)
+   GLES20.glDepthMask(false)
+   val modelViewProjectionMatTemp = FloatArray(16)
+   Matrix.multiplyMM(modelViewProjectionMatTemp, 0, projmtx, 0, viewmtx, 0)
+   Matrix.multiplyMM(modelViewProjectionMat, 0, modelViewProjectionMatTemp, 0, modelmtx, 0)
+   Matrix.multiplyMM(modelViewMat, 0, viewmtx, 0, modelmtx, 0)
+
+   // Set the lighting environment properties.
+   Matrix.multiplyMV(viewLightDirection, 0, modelViewMat, 0, lightDirection, 0)
+   normalizeVec3(viewLightDirection)
+   GLES20.glUniform4f(
+       lightingParametersUniform,
+       viewLightDirection[0],
+       viewLightDirection[1],
+       viewLightDirection[2],
+       1f
+   )
+   GLES20.glUniform4fv(colorCorrectionParameterUniform, 1, colorCorrectionRgba, 0)
+
+   // Set the object material properties.
+   GLES20.glUniform4f(materialParametersUniform, ambient, diffuse, specular, specularPower)
+
+   // Set the ModelViewProjection matrix in the shader.
+   GLES20.glUniformMatrix4fv(modelViewUniform, 1, false, modelViewMat, 0)
+   GLES20.glUniformMatrix4fv(modelViewProjectionUniform, 1, false, modelViewProjectionMat, 0)
+   GLES20.glEnableVertexAttribArray(attriVertices)
+   GLES20.glVertexAttribPointer(attriVertices, 3, GLES20.GL_FLOAT, false, 0, vertices)
+   GLES20.glEnableVertexAttribArray(attriNormals)
+   GLES20.glVertexAttribPointer(attriNormals, 3, GLES20.GL_FLOAT, false, 0, normals)
+   GLES20.glEnableVertexAttribArray(attriUvs)
+   GLES20.glVertexAttribPointer(attriUvs, 2, GLES20.GL_FLOAT, false, 0, textureCoords)
+   GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+   GLES20.glUniform1i(textureUniform, 0)
+   GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId[0])
+   GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
+   GLES20.glUniform1i(textureUniformEye, 1)
+   GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId[1])
+   GLES20.glUniform4fv(tintColorUniform, 1, tintColor, 0)
+   GLES20.glEnable(GLES20.GL_BLEND)
+
+   // Textures are loaded with premultiplied alpha
+   // (https://developer.android.com/reference/android/graphics/BitmapFactory.Options#inPremultiplied),
+   // so we use the premultiplied alpha blend factors.
+   GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_SRC_ALPHA)
+   GLES20.glDrawElements(
+       GLES20.GL_TRIANGLES, triangleIndices.limit(), GLES20.GL_UNSIGNED_SHORT, triangleIndices
+   )
+   GLES20.glUseProgram(0)
+   GLES20.glDepthMask(true)
+}</code></pre>
+<p>As we previously changed the signature of <code>createOnGlThread</code> method, we need to modify <code>setFaceMeshTexture</code> in <code>AugmentedFaceNode</code> and <code>onFaceAdded</code> method in <code>MainActivity</code> as following:  </p>
+<p><code>AugmentedFaceNode.kt</code></p>
+<pre><code>fun setFaceMeshTexture(assetNames: ArrayList&lt;String&gt;) {
+   augmentedFaceRenderer.createOnGlThread(context, assetNames)
+   renderFaceMesh = true
+}</code></pre>
+<p><code>MainActivity.kt</code></p>
+<pre><code>override fun onFaceAdded(face: AugmentedFaceNode) {
+   face.setFaceMeshTexture(arrayListOf(&#34;models/contour.png&#34;, &#34;models/eyeShadow.png&#34;))
+   face.setContourColor(contourColor)
+}</code></pre>
+<p>At approx. line 52, change how we calculate <code>objectColor.</code> We are now getting in 2 textures and we need to combine the color together:</p>
+<p><code>object.frag</code></p>
+<pre><code>// Flip the y-texture coordinate to address the texture from top-left.
+vec4 objectColorContour = texture2D(u_Texture, vec2(v_TexCoord.x, 1.0 - v_TexCoord.y));
+vec4 objectColorEye = texture2D(u_TextureEye, vec2(v_TexCoord.x, 1.0 - v_TexCoord.y));
+
+vec4 objectColor = objectColorContour + objectColorEye;
+objectColor.rgb = objectColor.rgb * u_TintColor.rgb;</code></pre>
+<p>Run the app and see the result:</p>
+<p class="image-container"><img style="width: 433.50px" src="img/dd7c3123c7898ab4.png"></p>
+<aside class="special"><p><strong>Note: </strong>After these changes I could see that sometimes the app would either show black screen or black texture. Removing and adding the app again will help. </p>
+</aside>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Add Eyeshadow UI" duration="10">
+        <p>Now we want to apply different tint color to each texture. But first we will add UI elements to do so.</p>
+<h2 is-upgraded><strong>Add Eyeshadow UI to layout</strong></h2>
+<p>We will make the same type of UI for eyeshadow color selection: <code>ChipGroup</code> with colored <code>Chip.Choice</code> element:</p>
+<p><code>activity_main.xml</code></p>
+<pre><code>&lt;androidx.constraintlayout.widget.ConstraintLayout xmlns:android=&#34;http://schemas.android.com/apk/res/android&#34;
+   xmlns:tools=&#34;http://schemas.android.com/tools&#34;
+   android:layout_width=&#34;match_parent&#34;
+   android:layout_height=&#34;match_parent&#34;
+   xmlns:app=&#34;http://schemas.android.com/apk/res-auto&#34;
+   tools:context=&#34;.MainActivity&#34;&gt;
+
+   &lt;fragment android:name=&#34;blog.creativetech.armakeup.arface.AugmentedFaceFragment&#34;
+       android:id=&#34;@+id/face_view&#34;
+       android:layout_width=&#34;match_parent&#34;
+       android:layout_height=&#34;match_parent&#34;
+       android:layout_gravity=&#34;top&#34; /&gt;
+
+   &lt;com.google.android.material.textview.MaterialTextView
+       android:id=&#34;@+id/contour_text&#34;
+       android:layout_width=&#34;wrap_content&#34;
+       android:layout_height=&#34;wrap_content&#34;
+       app:layout_constraintLeft_toLeftOf=&#34;parent&#34;
+       app:layout_constraintBottom_toBottomOf=&#34;@id/contour_group&#34;
+       app:layout_constraintTop_toTopOf=&#34;@id/contour_group&#34;
+       android:layout_marginStart=&#34;16dp&#34;
+       android:text=&#34;@string/choose_contour&#34; /&gt;
+
+   &lt;com.google.android.material.chip.ChipGroup
+       android:id=&#34;@+id/contour_group&#34;
+       app:singleSelection=&#34;true&#34;
+       android:layout_marginStart=&#34;16dp&#34;
+       android:layout_marginBottom=&#34;16dp&#34;
+       android:layout_width=&#34;wrap_content&#34;
+       android:layout_height=&#34;wrap_content&#34;
+       app:checkedChip=&#34;@id/chip_contour1&#34;
+       app:layout_constraintLeft_toRightOf=&#34;@id/contour_text&#34;
+       app:layout_constraintBottom_toBottomOf=&#34;parent&#34;&gt;
+
+       &lt;com.google.android.material.chip.Chip
+           style=&#34;@style/Widget.MaterialComponents.Chip.Choice&#34;
+           android:id=&#34;@+id/chip_contour1&#34;
+           android:layout_width=&#34;wrap_content&#34;
+           android:layout_height=&#34;wrap_content&#34;
+           android:backgroundTint=&#34;#af8062&#34;
+           android:text=&#34;@string/java&#34;/&gt;
+       &lt;com.google.android.material.chip.Chip
+           style=&#34;@style/Widget.MaterialComponents.Chip.Choice&#34;
+           android:id=&#34;@+id/chip_contour2&#34;
+           android:layout_width=&#34;wrap_content&#34;
+           android:layout_height=&#34;wrap_content&#34;
+           android:backgroundTint=&#34;#f3d9a9&#34;
+           android:text=&#34;@string/banana&#34;/&gt;
+
+   &lt;/com.google.android.material.chip.ChipGroup&gt;
+
+   &lt;com.google.android.material.textview.MaterialTextView
+       android:id=&#34;@+id/eyes_text&#34;
+       android:layout_width=&#34;wrap_content&#34;
+       android:layout_height=&#34;wrap_content&#34;
+       app:layout_constraintLeft_toLeftOf=&#34;parent&#34;
+       app:layout_constraintBottom_toBottomOf=&#34;@id/eyes_group&#34;
+       app:layout_constraintTop_toTopOf=&#34;@id/eyes_group&#34;
+       android:layout_marginStart=&#34;16dp&#34;
+       android:text=&#34;@string/choose_eyeshadow&#34; /&gt;
+
+   &lt;com.google.android.material.chip.ChipGroup
+       android:id=&#34;@+id/eyes_group&#34;
+       app:singleSelection=&#34;true&#34;
+       android:layout_marginStart=&#34;16dp&#34;
+       android:layout_marginBottom=&#34;16dp&#34;
+       android:layout_width=&#34;wrap_content&#34;
+       android:layout_height=&#34;wrap_content&#34;
+       app:checkedChip=&#34;@id/chip_eye1&#34;
+       app:layout_constraintLeft_toRightOf=&#34;@id/eyes_text&#34;
+       app:layout_constraintBottom_toTopOf=&#34;@id/contour_group&#34;&gt;
+
+       &lt;com.google.android.material.chip.Chip
+           style=&#34;@style/Widget.MaterialComponents.Chip.Choice&#34;
+           android:id=&#34;@+id/chip_eye1&#34;
+           android:layout_width=&#34;wrap_content&#34;
+           android:layout_height=&#34;wrap_content&#34;
+           android:backgroundTint=&#34;#c48a66&#34;
+           android:text=&#34;@string/peachy&#34;/&gt;
+       &lt;com.google.android.material.chip.Chip
+           style=&#34;@style/Widget.MaterialComponents.Chip.Choice&#34;
+           android:id=&#34;@+id/chip_eye2&#34;
+           android:layout_width=&#34;wrap_content&#34;
+           android:layout_height=&#34;wrap_content&#34;
+           android:backgroundTint=&#34;#b06252&#34;
+           android:text=&#34;@string/coral&#34;/&gt;
+
+   &lt;/com.google.android.material.chip.ChipGroup&gt;
+  
+&lt;/androidx.constraintlayout.widget.ConstraintLayout&gt;</code></pre>
+<p>In <code>MainActivity</code> we need to add <code>CheckedChangeListener</code> for <code>eyes_group</code> ChipGroup:</p>
+<p><code>MainActivity.kt</code></p>
+<pre><code>override fun onCreate(savedInstanceState: Bundle?) {
+   super.onCreate(savedInstanceState)
+   setContentView(R.layout.activity_main)
+   (face_view as AugmentedFaceFragment).setAugmentedFaceListener(this)
+   contour_group.setOnCheckedChangeListener { _, checkedId -&gt;
+       when (checkedId) {
+           chip_contour1.id -&gt; changeContour(floatArrayOf(0.686f, 0.5f, 0.38f, 1f))
+           chip_contour2.id -&gt; changeContour(floatArrayOf(0.95f, 0.85f, 0.66f, 1f))
+       }
+   }
+   eyes_group.setOnCheckedChangeListener { _, checkedId -&gt;
+       when (checkedId) {
+           chip_eye1.id -&gt; changeEyeshadow(floatArrayOf(0.7686f, 0.5411f, 0.4f, 1f))
+           chip_eye2.id -&gt; changeEyeshadow(floatArrayOf(0.69f, 0.38f, 0.32f, 1f))
+       }
+   }
+}</code></pre>
+<p>Now add missing implementation for <code>changeEyeshadow</code> method:</p>
+<p><code>MainActivity.kt</code></p>
+<pre><code>private fun changeEyeshadow(color: FloatArray) {
+   eyeshadowColor = color
+   eyeshadowChanged = true
+}</code></pre>
+<p>And define following variables:</p>
+<p><code>MainActivity.kt</code></p>
+<pre><code>private var eyeshadowChanged = false
+private var eyeshadowColor = floatArrayOf(0.686f, 0.5f, 0.38f, 1f)</code></pre>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Apply multiple color tint" duration="10">
+        <p>In this chapter we will focus on connecting the UI elements with the fragment shader.</p>
+<h2 is-upgraded><strong>Modify Fragment Shader</strong></h2>
+<p>Now define <code>u_TintColorEyes</code> in the fragment shader to hold information about the selected color for eye shadow:</p>
+<p><code>object.frag</code></p>
+<pre><code>precision mediump float;
+
+uniform vec4 u_TintColorEyes;</code></pre>
+<p>Last change in the fragment shader:</p>
+<ul>
+<li>Get texture information for contour  - <code>objectColorContour</code></li>
+<li>Get texture information for eye shadow - <code>objectColorEye</code></li>
+<li>Apply contour tint to <code>objectColorContour</code></li>
+<li>Apply eye shadow tint to <code>objectColorEye</code></li>
+<li>Sum up <code>objectColorContour</code> and <code>objectColorEye</code></li>
+</ul>
+<p><code>object.frag</code></p>
+<pre><code>vec4 objectColorContour = texture2D(u_Texture, vec2(v_TexCoord.x, 1.0 - v_TexCoord.y));
+vec4 objectColorEye = texture2D(u_TextureEye, vec2(v_TexCoord.x, 1.0 - v_TexCoord.y));
+
+objectColorContour.rgb = objectColorContour.rgb * u_TintColor.rgb;
+objectColorEye.rgb = objectColorEye.rgb * u_TintColorEyes.rgb;
+vec4 objectColor = objectColorContour + objectColorEye;</code></pre>
+<p>You can find full modified fragment shader code under:</p>
+<p><code>object.frag</code></p>
+<pre><code>precision mediump float;
+
+uniform sampler2D u_Texture;
+uniform sampler2D u_TextureEye;
+
+uniform vec4 u_LightingParameters;
+uniform vec4 u_MaterialParameters;
+uniform vec4 u_ColorCorrectionParameters;
+
+varying vec3 v_ViewPosition;
+varying vec3 v_ViewNormal;
+varying vec2 v_TexCoord;
+uniform vec4 u_ObjColor;
+uniform vec4 u_TintColor;
+uniform vec4 u_TintColorEyes;
+
+void main() {
+   // We support approximate sRGB gamma.
+   const float kGamma = 0.4545454;
+   const float kInverseGamma = 2.2;
+   const float kMiddleGrayGamma = 0.466;
+
+   // Unpack lighting and material parameters for better naming.
+   vec3 viewLightDirection = u_LightingParameters.xyz;
+   vec3 colorShift = u_ColorCorrectionParameters.rgb;
+   float averagePixelIntensity = u_ColorCorrectionParameters.a;
+
+   float materialAmbient = u_MaterialParameters.x;
+   float materialDiffuse = u_MaterialParameters.y;
+   float materialSpecular = u_MaterialParameters.z;
+   float materialSpecularPower = u_MaterialParameters.w;
+
+   // Normalize varying parameters, because they are linearly interpolated in the vertex shader.
+   vec3 viewFragmentDirection = normalize(v_ViewPosition);
+   vec3 viewNormal = normalize(v_ViewNormal);
+
+   // Flip the y-texture coordinate to address the texture from top-left.
+   vec4 objectColorContour = texture2D(u_Texture, vec2(v_TexCoord.x, 1.0 - v_TexCoord.y));
+   vec4 objectColorEye = texture2D(u_TextureEye, vec2(v_TexCoord.x, 1.0 - v_TexCoord.y));
+
+   objectColorContour.rgb = objectColorContour.rgb * u_TintColor.rgb;
+   objectColorEye.rgb = objectColorEye.rgb * u_TintColorEyes.rgb;
+   vec4 objectColor = objectColorContour + objectColorEye;
+
+   // Apply color to grayscale image only if the alpha of u_ObjColor is
+   // greater and equal to 255.0.
+   objectColor.rgb *= mix(vec3(1.0), u_ObjColor.rgb / 255.0,
+                          step(255.0, u_ObjColor.a));
+
+   // Apply inverse SRGB gamma to the texture before making lighting calculations.
+   objectColor.rgb = pow(objectColor.rgb, vec3(kInverseGamma));
+
+
+   // Ambient light is unaffected by the light intensity.
+   float ambient = materialAmbient;
+
+   // Approximate a hemisphere light (not a harsh directional light).
+   float diffuse = materialDiffuse *
+           0.5 * (dot(viewNormal, viewLightDirection) + 1.0);
+
+   // Compute specular light.
+   vec3 reflectedLightDirection = reflect(viewLightDirection, viewNormal);
+   float specularStrength = max(0.0, dot(viewFragmentDirection, reflectedLightDirection));
+   float specular = materialSpecular *
+           pow(specularStrength, materialSpecularPower);
+
+   vec3 color = objectColor.rgb * (ambient + diffuse) + specular;
+   // Apply SRGB gamma before writing the fragment color.
+   color.rgb = pow(color, vec3(kGamma));
+   // Apply average pixel intensity and color shift
+   color *= colorShift * (averagePixelIntensity / kMiddleGrayGamma);
+   gl_FragColor.rgb = color;
+   gl_FragColor.a = objectColor.a;
+}</code></pre>
+<h2 is-upgraded><strong>Define and Bind Tint Color</strong></h2>
+<p>In <code>AugmentedFaceRenderer</code> we need to define a new color variable and color reference for the shader: </p>
+<p><code>AugmentedFaceRenderer.kt</code></p>
+<pre><code>private var tintColorEyesUniform = 0
+private var tintColorEyes = floatArrayOf(1.0f, 1.0f, 1.0f, 0f)</code></pre>
+<p>In <code>createOnGlThread</code> bind <code>tintColorEyesUniform</code> with <code>u_TintColorEyes</code> (approx line 78)</p>
+<p><code>AugmentedFaceRenderer.kt</code></p>
+<pre><code>tintColorEyesUniform = GLES20.glGetUniformLocation(program, &#34;u_TintColorEyes&#34;)</code></pre>
+<p>Pass tintColorEyes value to the shader in <code>draw</code> method (approx line 164 ):</p>
+<p><code>AugmentedFaceRenderer.kt</code></p>
+<pre><code>GLES20.glUniform4fv(tintColorEyesUniform, 1, tintColorEyes, 0)</code></pre>
+<h2 is-upgraded><strong>Set Color</strong></h2>
+<p>As we did previously with contourColor, we need to set shadow color onFaceAdded callback.</p>
+<p>Add <code>setEyeshadowColor</code> method in <code>AugmentedFaceRenderer</code>:</p>
+<p><code>AugmentedFaceRenderer.kt</code></p>
+<pre><code>fun setEyeshadowColor(eyeshadowColor: FloatArray) {
+   tintColorEyes = eyeshadowColor
+}</code></pre>
+<p>Add <code>setEyeshadowColor</code> method to AugmentedFaceNode:</p>
+<p><code>AugmentedFaceNode.kt</code></p>
+<pre><code>fun setEyeshadowColor(eyeshadowColor: FloatArray){
+   augmentedFaceRenderer.setEyeshadowColor(eyeshadowColor)
+}</code></pre>
+<p>Update <code>onFaceAdded</code> and <code>onFaceUpdate</code> methods with <code>setEyeshadowColor</code> call<code>:</code></p>
+<p><code>MainActivity.kt</code></p>
+<pre><code>override fun onFaceAdded(face: AugmentedFaceNode) {
+   face.setFaceMeshTexture(arrayListOf(&#34;models/contour.png&#34;, &#34;models/eyeShadow.png&#34;))
+   face.setContourColor(contourColor)
+   face.setEyeshadowColor(eyeshadowColor)
+}
+
+override fun onFaceUpdate(face: AugmentedFaceNode) {
+   if (contourChanged) {
+       contourChanged = false
+       face.setContourColor(contourColor)
+   }
+   if (eyeshadowChanged) {
+       eyeshadowChanged = false
+       face.setEyeshadowColor(eyeshadowColor)
+   }
+}</code></pre>
+<p>Now run the app and see the final result:</p>
+<p class="image-container"><img style="width: 514.81px" src="img/9012906e80ea607.png"></p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Congratulations" duration="0">
+        <p>Congratulations, you&#39;ve successfully built your try-on makeup app! </p>
+<p>You have created an Android app based on ARCore SDK and Kotlin. You have learned how to create makeup textures in Photoshop and apply multiple textures to faces at runtime at the same time.</p>
+<p>You now know the key steps required to work with AugmentedFaces API from ARCore and can build face filter applications in Kotlin and ARCore.</p>
+<h2 is-upgraded><strong>Reference docs</strong></h2>
+<ul>
+<li><a href="https://github.com/google-ar/arcore-android-sdk" target="_blank">ARCore SDK github repository</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Shader" target="_blank">Wikipedia: Shader</a></li>
+<li><a href="https://developers.google.com/ar/develop/java/augmented-faces" target="_blank">Augmented Faces API</a></li>
+</ul>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Bonus: Modified files" duration="0">
+        <p><code>object.frag</code></p>
+<pre><code>precision mediump float;
+
+uniform sampler2D u_Texture;
+uniform sampler2D u_TextureEye;
+
+uniform vec4 u_LightingParameters;
+uniform vec4 u_MaterialParameters;
+uniform vec4 u_ColorCorrectionParameters;
+
+varying vec3 v_ViewPosition;
+varying vec3 v_ViewNormal;
+varying vec2 v_TexCoord;
+uniform vec4 u_ObjColor;
+uniform vec4 u_TintColor;
+uniform vec4 u_TintColorEyes;
+
+void main() {
+  // We support approximate sRGB gamma.
+  const float kGamma = 0.4545454;
+  const float kInverseGamma = 2.2;
+  const float kMiddleGrayGamma = 0.466;
+
+  // Unpack lighting and material parameters for better naming.
+  vec3 viewLightDirection = u_LightingParameters.xyz;
+  vec3 colorShift = u_ColorCorrectionParameters.rgb;
+  float averagePixelIntensity = u_ColorCorrectionParameters.a;
+
+  float materialAmbient = u_MaterialParameters.x;
+  float materialDiffuse = u_MaterialParameters.y;
+  float materialSpecular = u_MaterialParameters.z;
+  float materialSpecularPower = u_MaterialParameters.w;
+
+  // Normalize varying parameters, because they are linearly interpolated in the vertex shader.
+  vec3 viewFragmentDirection = normalize(v_ViewPosition);
+  vec3 viewNormal = normalize(v_ViewNormal);
+
+  // Flip the y-texture coordinate to address the texture from top-left.
+  vec4 objectColorContour = texture2D(u_Texture, vec2(v_TexCoord.x, 1.0 - v_TexCoord.y));
+  vec4 objectColorEye = texture2D(u_TextureEye, vec2(v_TexCoord.x, 1.0 - v_TexCoord.y));
+
+  objectColorContour.rgb = objectColorContour.rgb * u_TintColor.rgb;
+  objectColorEye.rgb = objectColorEye.rgb * u_TintColorEyes.rgb;
+  vec4 objectColor = objectColorContour + objectColorEye;
+
+  // Apply color to grayscale image only if the alpha of u_ObjColor is
+  // greater and equal to 255.0.
+  objectColor.rgb *= mix(vec3(1.0), u_ObjColor.rgb / 255.0,
+                         step(255.0, u_ObjColor.a));
+
+  // Apply inverse SRGB gamma to the texture before making lighting calculations.
+  objectColor.rgb = pow(objectColor.rgb, vec3(kInverseGamma));
+
+
+  // Ambient light is unaffected by the light intensity.
+  float ambient = materialAmbient;
+
+  // Approximate a hemisphere light (not a harsh directional light).
+  float diffuse = materialDiffuse *
+          0.5 * (dot(viewNormal, viewLightDirection) + 1.0);
+
+  // Compute specular light.
+  vec3 reflectedLightDirection = reflect(viewLightDirection, viewNormal);
+  float specularStrength = max(0.0, dot(viewFragmentDirection, reflectedLightDirection));
+  float specular = materialSpecular *
+          pow(specularStrength, materialSpecularPower);
+
+  vec3 color = objectColor.rgb * (ambient + diffuse) + specular;
+  // Apply SRGB gamma before writing the fragment color.
+  color.rgb = pow(color, vec3(kGamma));
+  // Apply average pixel intensity and color shift
+  color *= colorShift * (averagePixelIntensity / kMiddleGrayGamma);
+  gl_FragColor.rgb = color;
+  gl_FragColor.a = objectColor.a;
+}</code></pre>
+<p><code>AugmentedFaceNode.kt</code></p>
+<pre><code>class AugmentedFaceNode(private val augmentedFace: AugmentedFace?, val context: Context) {
+
+   private val augmentedFaceRenderer = AugmentedFaceRenderer()
+   private val faceLandmarks = HashMap&lt;FaceLandmark, FaceRegion&gt;()
+   private var renderFaceMesh: Boolean = false
+
+   companion object {
+       enum class FaceLandmark {
+           FOREHEAD_RIGHT,
+           FOREHEAD_LEFT,
+           NOSE_TIP
+       }
+   }
+
+   init {
+       renderFaceMesh = false
+       augmentedFaceRenderer.setMaterialProperties(0.0f, 1.0f, 0.1f, 6.0f)
+   }
+
+   fun setRegionModel(faceLandmark: FaceLandmark, modelName: String, modelTexture: String) {
+       val faceRegion  = FaceRegion(faceLandmark)
+       faceRegion.setRenderable(context, modelName, modelTexture)
+       faceLandmarks[faceLandmark] = faceRegion
+   }
+
+   fun setFaceMeshTexture(assetNames: ArrayList&lt;String&gt;) {
+       augmentedFaceRenderer.createOnGlThread(context, assetNames)
+       renderFaceMesh = true
+   }
+
+   fun onDraw(projectionMatrix: FloatArray, viewMatrix: FloatArray, colorCorrectionRgba: FloatArray) {
+       augmentedFace?.let { face -&gt;
+           if (face.trackingState != TrackingState.TRACKING) {
+               return
+           }
+
+           if (renderFaceMesh) {
+               val modelMatrix = FloatArray(16)
+               face.centerPose.toMatrix(modelMatrix, 0)
+               augmentedFaceRenderer.draw(
+                       projectionMatrix, viewMatrix, modelMatrix, colorCorrectionRgba, face
+               )
+           }
+
+           for (region in faceLandmarks.values) {
+               val objectMatrix = FloatArray(16)
+               getRegionPose(region.faceLandmark)?.toMatrix(objectMatrix, 0)
+               region.draw(objectMatrix, viewMatrix, projectionMatrix, colorCorrectionRgba)
+           }
+       }
+   }
+
+   fun setContourColor(contourColor: FloatArray) {
+       augmentedFaceRenderer.setContourColor(contourColor)
+   }
+
+   fun setEyeshadowColor(eyeshadowColor: FloatArray){
+       augmentedFaceRenderer.setEyeshadowColor(eyeshadowColor)
+   }
+
+   private fun getRegionPose(faceLandmark: FaceLandmark) : Pose? {
+       return when (faceLandmark) {
+           FaceLandmark.NOSE_TIP -&gt; augmentedFace?.getRegionPose(AugmentedFace.RegionType.NOSE_TIP)
+           FaceLandmark.FOREHEAD_LEFT -&gt; augmentedFace?.getRegionPose(AugmentedFace.RegionType.FOREHEAD_LEFT)
+           FaceLandmark.FOREHEAD_RIGHT -&gt; augmentedFace?.getRegionPose(AugmentedFace.RegionType.FOREHEAD_RIGHT)
+       }
+   }
+}
+</code></pre>
+<p><code>AugmentedFaceRenderer.kt</code></p>
+<pre><code>public class AugmentedFaceRenderer {
+   private val TAG = AugmentedFaceRenderer::class.java.simpleName
+
+   private var modelViewUniform = 0
+   private var modelViewProjectionUniform = 0
+
+   private var textureUniform = 0
+   private var textureUniformEye = 0
+
+
+   private var lightingParametersUniform = 0
+
+   private var materialParametersUniform = 0
+
+   private var colorCorrectionParameterUniform = 0
+
+   private var tintColorUniform = 0
+   private var tintColor = floatArrayOf(0.647f, 0.357f, 0.33f, 1f)
+
+   private var tintColorEyesUniform = 0
+   private var tintColorEyes = floatArrayOf(1.0f, 1.0f, 1.0f, 0f)
+
+   private var attriVertices = 0
+   private var attriUvs = 0
+   private var attriNormals = 0
+
+   // Set some default material properties to use for lighting.
+   private var ambient = 0.3f
+   private var diffuse = 1.0f
+   private var specular = 1.0f
+   private var specularPower = 6.0f
+
+   private val textureId = IntArray(2)
+
+   private val lightDirection = floatArrayOf(0.0f, 1.0f, 0.0f, 0.0f)
+   private var program = 0
+   private val modelViewProjectionMat = FloatArray(16)
+   private val modelViewMat = FloatArray(16)
+   private val viewLightDirection = FloatArray(4)
+
+   fun AugmentedFaceRenderer() {}
+
+   @Throws(IOException::class)
+   fun createOnGlThread(
+       context: Context,
+       diffuseTextureAssetNames: ArrayList&lt;String&gt;
+   ) {
+       val vertexShader: Int =
+           loadGLShader(TAG, context, GLES20.GL_VERTEX_SHADER, Companion.VERTEX_SHADER_NAME)
+       val fragmentShader: Int =
+           loadGLShader(TAG, context, GLES20.GL_FRAGMENT_SHADER, Companion.FRAGMENT_SHADER_NAME)
+       program = GLES20.glCreateProgram()
+       GLES20.glAttachShader(program, vertexShader)
+       GLES20.glAttachShader(program, fragmentShader)
+       GLES20.glLinkProgram(program)
+       modelViewProjectionUniform = GLES20.glGetUniformLocation(program, &#34;u_ModelViewProjection&#34;)
+       modelViewUniform = GLES20.glGetUniformLocation(program, &#34;u_ModelView&#34;)
+       textureUniform = GLES20.glGetUniformLocation(program, &#34;u_Texture&#34;)
+       //Bind Eye texture with shader variable
+       textureUniformEye = GLES20.glGetUniformLocation(program, &#34;u_TextureEye&#34;)
+       lightingParametersUniform = GLES20.glGetUniformLocation(program, &#34;u_LightningParameters&#34;)
+       materialParametersUniform = GLES20.glGetUniformLocation(program, &#34;u_MaterialParameters&#34;)
+       colorCorrectionParameterUniform =
+           GLES20.glGetUniformLocation(program, &#34;u_ColorCorrectionParameters&#34;)
+       tintColorUniform = GLES20.glGetUniformLocation(program, &#34;u_TintColor&#34;)
+       tintColorEyesUniform = GLES20.glGetUniformLocation(program, &#34;u_TintColorEyes&#34;)
+       attriVertices = GLES20.glGetAttribLocation(program, &#34;a_Position&#34;)
+       attriUvs = GLES20.glGetAttribLocation(program, &#34;a_TexCoord&#34;)
+       attriNormals = GLES20.glGetAttribLocation(program, &#34;a_Normal&#34;)
+       // Size of the texture array
+       GLES20.glGenTextures(2, textureId, 0)
+       // Load texture0
+       GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+       loadTexture(context, textureId, diffuseTextureAssetNames[0], 0)
+
+       // Load texture1
+       GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
+       loadTexture(context, textureId, diffuseTextureAssetNames[1], 1)
+   }
+
+   @Throws(IOException::class)
+   private fun loadTexture(
+           context: Context,
+           textureId: IntArray,
+           filename: String,
+           index: Int
+   ) {
+       val textureBitmap =
+               BitmapFactory.decodeStream(context.getAssets().open(filename))
+       GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId[index])
+       GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D,
+               GLES20.GL_TEXTURE_MIN_FILTER,
+               GLES20.GL_LINEAR_MIPMAP_LINEAR)
+       GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D,
+               GLES20.GL_TEXTURE_MAG_FILTER,
+               GLES20.GL_LINEAR)
+       GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, textureBitmap, 0)
+       GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D)
+       GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId[index])
+       textureBitmap.recycle()
+   }
+
+   fun draw(
+           projmtx: FloatArray?,
+           viewmtx: FloatArray?,
+           modelmtx: FloatArray?,
+           colorCorrectionRgba: FloatArray?,
+           face: AugmentedFace
+   ) {
+       val vertices: FloatBuffer = face.meshVertices
+       val normals: FloatBuffer = face.meshNormals
+       val textureCoords: FloatBuffer = face.meshTextureCoordinates
+       val triangleIndices: ShortBuffer = face.meshTriangleIndices
+       GLES20.glUseProgram(program)
+       GLES20.glDepthMask(false)
+       val modelViewProjectionMatTemp = FloatArray(16)
+       Matrix.multiplyMM(modelViewProjectionMatTemp, 0, projmtx, 0, viewmtx, 0)
+       Matrix.multiplyMM(modelViewProjectionMat, 0, modelViewProjectionMatTemp, 0, modelmtx, 0)
+       Matrix.multiplyMM(modelViewMat, 0, viewmtx, 0, modelmtx, 0)
+
+       // Set the lighting environment properties.
+       Matrix.multiplyMV(viewLightDirection, 0, modelViewMat, 0, lightDirection, 0)
+       normalizeVec3(viewLightDirection)
+       GLES20.glUniform4f(
+               lightingParametersUniform,
+               viewLightDirection[0],
+               viewLightDirection[1],
+               viewLightDirection[2],
+               1f
+       )
+       GLES20.glUniform4fv(colorCorrectionParameterUniform, 1, colorCorrectionRgba, 0)
+
+       // Set the object material properties.
+       GLES20.glUniform4f(materialParametersUniform, ambient, diffuse, specular, specularPower)
+
+       // Set the ModelViewProjection matrix in the shader.
+       GLES20.glUniformMatrix4fv(modelViewUniform, 1, false, modelViewMat, 0)
+       GLES20.glUniformMatrix4fv(modelViewProjectionUniform, 1, false, modelViewProjectionMat, 0)
+       GLES20.glEnableVertexAttribArray(attriVertices)
+       GLES20.glVertexAttribPointer(attriVertices, 3, GLES20.GL_FLOAT, false, 0, vertices)
+       GLES20.glEnableVertexAttribArray(attriNormals)
+       GLES20.glVertexAttribPointer(attriNormals, 3, GLES20.GL_FLOAT, false, 0, normals)
+       GLES20.glEnableVertexAttribArray(attriUvs)
+       GLES20.glVertexAttribPointer(attriUvs, 2, GLES20.GL_FLOAT, false, 0, textureCoords)
+       GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+       GLES20.glUniform1i(textureUniform, 0)
+       GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId[0])
+       GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
+       GLES20.glUniform1i(textureUniformEye, 1)
+       GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId[1])
+       GLES20.glUniform4fv(tintColorUniform, 1, tintColor, 0)
+       GLES20.glUniform4fv(tintColorEyesUniform, 1, tintColorEyes, 0)
+       GLES20.glEnable(GLES20.GL_BLEND)
+
+       // Textures are loaded with premultiplied alpha
+       // (https://developer.android.com/reference/android/graphics/BitmapFactory.Options#inPremultiplied),
+       // so we use the premultiplied alpha blend factors.
+       GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_SRC_ALPHA)
+       GLES20.glDrawElements(
+               GLES20.GL_TRIANGLES, triangleIndices.limit(), GLES20.GL_UNSIGNED_SHORT, triangleIndices
+       )
+       GLES20.glUseProgram(0)
+       GLES20.glDepthMask(true)
+   }
+
+   fun setMaterialProperties(
+       ambient: Float,
+       diffuse: Float,
+       specular: Float,
+       specularPower: Float
+   ) {
+       this.ambient = ambient
+       this.diffuse = diffuse
+       this.specular = specular
+       this.specularPower = specularPower
+   }
+
+   private fun normalizeVec3(v: FloatArray) {
+       val reciprocalLength = 1.0f / Math.sqrt(
+           v[0] * v[0] + v[1] * v[1] + (v[2] * v[2]).toDouble()
+       ).toFloat()
+       v[0] *= reciprocalLength
+       v[1] *= reciprocalLength
+       v[2] *= reciprocalLength
+   }
+
+   fun setContourColor(contourColor: FloatArray) {
+       tintColor = contourColor
+   }
+
+   fun setEyeshadowColor(eyeshadowColor: FloatArray) {
+       tintColorEyes = eyeshadowColor
+   }
+
+   companion object {
+       private const val VERTEX_SHADER_NAME = &#34;shaders/object.vert&#34;
+       private const val FRAGMENT_SHADER_NAME = &#34;shaders/object.frag&#34;
+   }
+}
+</code></pre>
+<p><code>MainActivity.kt</code></p>
+<pre><code>class MainActivity : AppCompatActivity(), AugmentedFaceListener {
+   private var contourChanged = false
+   private var contourColor = floatArrayOf(0.686f, 0.5f, 0.38f, 1f)
+   private var eyeshadowChanged = false
+   private var eyeshadowColor = floatArrayOf(0.686f, 0.5f, 0.38f, 1f)
+
+   override fun onCreate(savedInstanceState: Bundle?) {
+       super.onCreate(savedInstanceState)
+       setContentView(R.layout.activity_main)
+       (face_view as AugmentedFaceFragment).setAugmentedFaceListener(this)
+       contour_group.setOnCheckedChangeListener { _, checkedId -&gt;
+           when (checkedId) {
+               chip_contour1.id -&gt;
+                   changeContour(floatArrayOf(0.686f, 0.5f, 0.38f, 1f))
+               chip_contour2.id -&gt;
+                   changeContour(floatArrayOf(0.95f, 0.85f, 0.66f, 1f))
+           }
+       }
+       eyes_group.setOnCheckedChangeListener { _, checkedId -&gt;
+           when (checkedId) {
+               chip_eye1.id -&gt; changeEyeshadow(floatArrayOf(0.7686f, 0.5411f, 0.4f, 1f))
+               chip_eye2.id -&gt; changeEyeshadow(floatArrayOf(0.69f, 0.38f, 0.32f, 1f))
+           }
+       }
+   }
+
+   override fun onFaceAdded(face: AugmentedFaceNode) {
+       face.setFaceMeshTexture(arrayListOf(&#34;models/contour.png&#34;, &#34;models/eyeShadow.png&#34;))
+       face.setContourColor(contourColor)
+       face.setEyeshadowColor(eyeshadowColor)
+   }
+
+   override fun onFaceUpdate(face: AugmentedFaceNode) {
+       if (contourChanged) {
+           contourChanged = false
+           face.setContourColor(contourColor)
+       }
+       if (eyeshadowChanged) {
+           eyeshadowChanged = false
+           face.setEyeshadowColor(eyeshadowColor)
+       }
+   }
+
+   private fun changeContour(color: FloatArray) {
+       contourColor = color
+       contourChanged = true
+   }
+
+   private fun changeEyeshadow(color: FloatArray) {
+       eyeshadowColor = color
+       eyeshadowChanged = true
+   }
+}</code></pre>
+<p><code>activity_main.xml</code></p>
+<pre><code>&lt;androidx.constraintlayout.widget.ConstraintLayout xmlns:android=&#34;http://schemas.android.com/apk/res/android&#34;
+   xmlns:tools=&#34;http://schemas.android.com/tools&#34;
+   android:layout_width=&#34;match_parent&#34;
+   android:layout_height=&#34;match_parent&#34;
+   xmlns:app=&#34;http://schemas.android.com/apk/res-auto&#34;
+   tools:context=&#34;.MainActivity&#34;&gt;
+
+   &lt;fragment android:name=&#34;blog.creativetech.armakeup.arface.AugmentedFaceFragment&#34;
+       android:id=&#34;@+id/face_view&#34;
+       android:layout_width=&#34;match_parent&#34;
+       android:layout_height=&#34;match_parent&#34;
+       android:layout_gravity=&#34;top&#34; /&gt;
+
+   &lt;com.google.android.material.textview.MaterialTextView
+       android:id=&#34;@+id/contour_text&#34;
+       android:layout_width=&#34;wrap_content&#34;
+       android:layout_height=&#34;wrap_content&#34;
+       app:layout_constraintLeft_toLeftOf=&#34;parent&#34;
+       app:layout_constraintBottom_toBottomOf=&#34;@id/contour_group&#34;
+       app:layout_constraintTop_toTopOf=&#34;@id/contour_group&#34;
+       android:layout_marginStart=&#34;16dp&#34;
+       android:text=&#34;@string/choose_contour&#34; /&gt;
+
+   &lt;com.google.android.material.chip.ChipGroup
+       android:id=&#34;@+id/contour_group&#34;
+       app:singleSelection=&#34;true&#34;
+       android:layout_marginStart=&#34;16dp&#34;
+       android:layout_marginBottom=&#34;16dp&#34;
+       android:layout_width=&#34;wrap_content&#34;
+       android:layout_height=&#34;wrap_content&#34;
+       app:checkedChip=&#34;@id/chip_contour1&#34;
+       app:layout_constraintLeft_toRightOf=&#34;@id/contour_text&#34;
+       app:layout_constraintBottom_toBottomOf=&#34;parent&#34;&gt;
+
+       &lt;com.google.android.material.chip.Chip
+           style=&#34;@style/Widget.MaterialComponents.Chip.Choice&#34;
+           android:id=&#34;@+id/chip_contour1&#34;
+           android:layout_width=&#34;wrap_content&#34;
+           android:layout_height=&#34;wrap_content&#34;
+           android:backgroundTint=&#34;#af8062&#34;
+           android:text=&#34;@string/java&#34;/&gt;
+       &lt;com.google.android.material.chip.Chip
+           style=&#34;@style/Widget.MaterialComponents.Chip.Choice&#34;
+           android:id=&#34;@+id/chip_contour2&#34;
+           android:layout_width=&#34;wrap_content&#34;
+           android:layout_height=&#34;wrap_content&#34;
+           android:backgroundTint=&#34;#f3d9a9&#34;
+           android:text=&#34;@string/banana&#34;/&gt;
+
+   &lt;/com.google.android.material.chip.ChipGroup&gt;
+
+   &lt;com.google.android.material.textview.MaterialTextView
+       android:id=&#34;@+id/eyes_text&#34;
+       android:layout_width=&#34;wrap_content&#34;
+       android:layout_height=&#34;wrap_content&#34;
+       app:layout_constraintLeft_toLeftOf=&#34;parent&#34;
+       app:layout_constraintBottom_toBottomOf=&#34;@id/eyes_group&#34;
+       app:layout_constraintTop_toTopOf=&#34;@id/eyes_group&#34;
+       android:layout_marginStart=&#34;16dp&#34;
+       android:text=&#34;@string/choose_eyeshadow&#34; /&gt;
+
+   &lt;com.google.android.material.chip.ChipGroup
+       android:id=&#34;@+id/eyes_group&#34;
+       app:singleSelection=&#34;true&#34;
+       android:layout_marginStart=&#34;16dp&#34;
+       android:layout_marginBottom=&#34;16dp&#34;
+       android:layout_width=&#34;wrap_content&#34;
+       android:layout_height=&#34;wrap_content&#34;
+       app:checkedChip=&#34;@id/chip_eye1&#34;
+       app:layout_constraintLeft_toRightOf=&#34;@id/eyes_text&#34;
+       app:layout_constraintBottom_toTopOf=&#34;@id/contour_group&#34;&gt;
+
+       &lt;com.google.android.material.chip.Chip
+           style=&#34;@style/Widget.MaterialComponents.Chip.Choice&#34;
+           android:id=&#34;@+id/chip_eye1&#34;
+           android:layout_width=&#34;wrap_content&#34;
+           android:layout_height=&#34;wrap_content&#34;
+           android:backgroundTint=&#34;#c48a66&#34;
+           android:text=&#34;@string/peachy&#34;/&gt;
+       &lt;com.google.android.material.chip.Chip
+           style=&#34;@style/Widget.MaterialComponents.Chip.Choice&#34;
+           android:id=&#34;@+id/chip_eye2&#34;
+           android:layout_width=&#34;wrap_content&#34;
+           android:layout_height=&#34;wrap_content&#34;
+           android:backgroundTint=&#34;#b06252&#34;
+           android:text=&#34;@string/coral&#34;/&gt;
+
+   &lt;/com.google.android.material.chip.ChipGroup&gt;
+
+&lt;/androidx.constraintlayout.widget.ConstraintLayout&gt;
+</code></pre>
+
+
+      </google-codelab-step>
+    
+  </google-codelab>
+
+  <script src="https://storage.googleapis.com/codelab-elements/native-shim.js"></script>
+  <script src="https://storage.googleapis.com/codelab-elements/custom-elements.min.js"></script>
+  <script src="https://storage.googleapis.com/codelab-elements/prettify.js"></script>
+  <script src="https://storage.googleapis.com/codelab-elements/codelab-elements.js"></script>
+  <script src="//support.google.com/inapp/api.js"></script>
+
+</body>
+</html>

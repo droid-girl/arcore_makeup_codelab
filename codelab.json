@@ -1,0 +1,29 @@
+{
+  "environment": "web",
+  "format": "html",
+  "prefix": "https://storage.googleapis.com",
+  "mainga": "UA-49880327-14",
+  "updated": "2021-01-24T19:18:53Z",
+  "id": "makeup-lab",
+  "duration": 74,
+  "title": "Makeup with Augmented Faces in Kotlin",
+  "authors": "Kristina Simakova",
+  "summary": "In this codelab, you'll build a try-on makeup app using ARCore Augmented Faces API.",
+  "source": "1nu1-OkytqApxcfotoiHdZQ5tLA4PfYCzfgOnWUIEViM",
+  "theme": "android",
+  "status": [
+    "published"
+  ],
+  "category": [
+    "Android"
+  ],
+  "tags": [
+    "android",
+    "arcore",
+    "augmentedfaces",
+    "kotlin"
+  ],
+  "feedback": "https://github.com/Kristina-Simakova/ar_makeup_codelab/issues",
+  "ga": "UA-70080194-6",
+  "url": "makeup-lab"
+}
